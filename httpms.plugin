@@ -2,7 +2,7 @@
 Loader=python3
 Module=httpms
 IAge=2
-Name=HTTP Media Server player
+Name=HTTP Media Server client for Rhythmbox
 Description=Lets you play music from your HTTPMS
 Authors=Doychin Atanasov <ironsmile@gmail.com>
 Copyright=Copyright © 2015 Doychin Atanasov
