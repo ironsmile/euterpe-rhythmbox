@@ -9,6 +9,9 @@ from gi.repository import GObject, RB, Peas, GLib
 
 gettext.install('rhythmbox', RB.locale_dir())
 
+# Change this once I find out how to create a "settings" dialog for the plugin
+HARD_CODED_SERVER_ADDRESS = 'http://httpms.example.com/'
+
 
 class HTTPMSPlugin(GObject.Object, Peas.Activatable):
     object = GObject.property(type=GObject.Object)
@@ -60,7 +63,7 @@ class HTTPMSSource(RB.BrowserSource):
         self.loader = None
         self.selected = False
         self.search_count = 1
-        self.base = 'http://doycho.com:9996/'
+        self.base = HARD_CODED_SERVER_ADDRESS
 
     def do_selected(self):
         if self.selected:
@@ -85,12 +88,8 @@ class HTTPMSSource(RB.BrowserSource):
 
         print("Searching for {}".format(term))
 
-        # st = self.search_types[self.search_type]
-        # self.container_view.get_column(0).set_title(st['title'])
-
         url = urllib.parse.urljoin(search_url, urllib.parse.quote(term))
         self.loader = rb.Loader()
-        # self.scrolled.hide()
         self.loader.get_url(url, self.search_tracks_api)
 
     def search_tracks_api(self, data):
@@ -128,7 +127,7 @@ class HTTPMSSource(RB.BrowserSource):
             db.entry_set(entry, RB.RhythmDBPropType.ARTIST, item['artist'])
             db.entry_set(entry, RB.RhythmDBPropType.TITLE, item['title'])
             db.entry_set(entry, RB.RhythmDBPropType.ALBUM, item['album'])
-            # db.entry_set(entry, RB.RhythmDBPropType.TRACK, item['track'])
+            db.entry_set(entry, RB.RhythmDBPropType.TRACK_NUMBER, item['track'])
             db.entry_set(entry, RB.RhythmDBPropType.LAST_SEEN, self.search_count)
 
         db.commit()
@@ -140,12 +139,13 @@ class HTTPMSSource(RB.BrowserSource):
 
         self.search_count = self.search_count + 1
         q = GLib.PtrArray()
-        db.query_append_params(q, RB.RhythmDBQueryType.EQUALS, RB.RhythmDBPropType.TYPE, entry_type)
-        db.query_append_params(q, RB.RhythmDBQueryType.EQUALS, RB.RhythmDBPropType.LAST_SEEN, self.search_count)
+        db.query_append_params(q, RB.RhythmDBQueryType.EQUALS,
+                                    RB.RhythmDBPropType.TYPE, entry_type)
+        db.query_append_params(q, RB.RhythmDBQueryType.EQUALS,
+                                    RB.RhythmDBPropType.LAST_SEEN, self.search_count)
         model = RB.RhythmDBQueryModel.new_empty(db)
 
         db.do_full_query_async_parsed(model, q)
         self.props.query_model = model
-        # self.songs.set_model(model)
 
 GObject.type_register(HTTPMSSource)
