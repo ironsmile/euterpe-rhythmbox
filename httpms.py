@@ -29,10 +29,10 @@ class HTTPMSPlugin(GObject.Object, Peas.Activatable):
 
         model = RB.RhythmDBQueryModel.new_empty(db)
         self.source = GObject.new(HTTPMSSource,
-                                    shell=shell,
-                                    name=_("HTTPMS"),
-                                    query_model=model,
-                                    entry_type=entry_type)
+                                  shell=shell,
+                                  name=("HTTPMS"),
+                                  query_model=model,
+                                  entry_type=entry_type)
         group = RB.DisplayPageGroup.get_by_id("shared")
         shell.append_display_page(self.source, group)
         shell.register_entry_type_for_source(self.source, entry_type)
@@ -120,7 +120,11 @@ class HTTPMSSource(RB.BrowserSource):
 
         entry = db.entry_lookup_by_location(uri)
         if entry:
-            db.entry_set(entry, RB.RhythmDBPropType.LAST_SEEN, self.search_count)
+            db.entry_set(
+                entry,
+                RB.RhythmDBPropType.LAST_SEEN,
+                self.search_count,
+            )
         else:
             entry = RB.RhythmDBEntry.new(db, entry_type, uri)
             db.entry_set(entry, RB.RhythmDBPropType.MOUNTPOINT, uri)
@@ -140,12 +144,17 @@ class HTTPMSSource(RB.BrowserSource):
         self.search_count = self.search_count + 1
         q = GLib.PtrArray()
         db.query_append_params(q, RB.RhythmDBQueryType.EQUALS,
-                                    RB.RhythmDBPropType.TYPE, entry_type)
-        db.query_append_params(q, RB.RhythmDBQueryType.EQUALS,
-                                    RB.RhythmDBPropType.LAST_SEEN, self.search_count)
+                               RB.RhythmDBPropType.TYPE, entry_type)
+        db.query_append_params(
+            q,
+            RB.RhythmDBQueryType.EQUALS,
+            RB.RhythmDBPropType.LAST_SEEN,
+            self.search_count,
+        )
         model = RB.RhythmDBQueryModel.new_empty(db)
 
         db.do_full_query_async_parsed(model, q)
         self.props.query_model = model
+
 
 GObject.type_register(HTTPMSSource)
