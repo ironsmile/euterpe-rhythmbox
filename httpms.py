@@ -3,9 +3,10 @@
 import json
 import gettext
 import urllib.parse
+import os.path
 
 import rb
-from gi.repository import GObject, RB, Peas, GLib
+from gi.repository import GObject, RB, Peas, GLib, Gtk, GdkPixbuf
 
 gettext.install('rhythmbox', RB.locale_dir())
 
@@ -33,6 +34,23 @@ class HTTPMSPlugin(GObject.Object, Peas.Activatable):
                                   name=("HTTPMS"),
                                   query_model=model,
                                   entry_type=entry_type)
+
+        self.icon = None
+        icon_path = os.path.join(
+            Peas.PluginInfo.get_module_dir(self.plugin_info),
+            "assets",
+            "icon-128.png",
+        )
+        if icon_path is not None:
+            _, width, height = Gtk.IconSize.lookup(Gtk.IconSize.LARGE_TOOLBAR)
+            icon = GdkPixbuf.Pixbuf.new_from_file_at_size(
+                icon_path,
+                width,
+                height,
+            )
+            self.source.set_property("icon", icon)
+            self.icon = icon
+
         group = RB.DisplayPageGroup.get_by_id("shared")
         shell.append_display_page(self.source, group)
         shell.register_entry_type_for_source(self.source, entry_type)
@@ -42,6 +60,8 @@ class HTTPMSPlugin(GObject.Object, Peas.Activatable):
 
         self.source.delete_thyself()
         del self.source
+
+        del self.icon
 
 
 class HTTPMSEntryType(RB.RhythmDBEntryType):
