@@ -93,6 +93,7 @@ class HTTPMSSource(RB.BrowserSource):
 
     def cancel_request(self):
         if self.loader:
+            print("cancelling ongoing search")
             self.loader.cancel()
             self.loader = None
 
@@ -103,6 +104,9 @@ class HTTPMSSource(RB.BrowserSource):
 
         self.cancel_request()
         self.new_model()
+
+        if len(term) < 2:
+            return
 
         search_url = urllib.parse.urljoin(self.base, '/search/')
 
@@ -135,10 +139,10 @@ class HTTPMSSource(RB.BrowserSource):
 
     def add_track(self, db, entry_type, item):
 
-        uri = urllib.parse.urljoin(self.base, '/file/')
-        uri = urllib.parse.urljoin(uri, '{}'.format(item['id']))
+        play_url = urllib.parse.urljoin(self.base, '/file/')
+        play_url = urllib.parse.urljoin(play_url, '{}'.format(item['id']))
 
-        entry = db.entry_lookup_by_location(uri)
+        entry = db.entry_lookup_by_location(play_url)
         if entry:
             db.entry_set(
                 entry,
@@ -146,13 +150,15 @@ class HTTPMSSource(RB.BrowserSource):
                 self.search_count,
             )
         else:
-            entry = RB.RhythmDBEntry.new(db, entry_type, uri)
-            db.entry_set(entry, RB.RhythmDBPropType.MOUNTPOINT, uri)
+            entry = RB.RhythmDBEntry.new(db, entry_type, play_url)
+            db.entry_set(entry, RB.RhythmDBPropType.MOUNTPOINT, play_url)
             db.entry_set(entry, RB.RhythmDBPropType.ARTIST, item['artist'])
             db.entry_set(entry, RB.RhythmDBPropType.TITLE, item['title'])
             db.entry_set(entry, RB.RhythmDBPropType.ALBUM, item['album'])
-            db.entry_set(entry, RB.RhythmDBPropType.TRACK_NUMBER, item['track'])
-            db.entry_set(entry, RB.RhythmDBPropType.LAST_SEEN, self.search_count)
+            db.entry_set(entry, RB.RhythmDBPropType.TRACK_NUMBER,
+                         item['track'])
+            db.entry_set(entry, RB.RhythmDBPropType.LAST_SEEN,
+                         self.search_count)
 
         db.commit()
 
