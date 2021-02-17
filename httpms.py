@@ -131,6 +131,7 @@ class HTTPMSSource(RB.BrowserSource):
         db.entry_delete_by_type(entry_type)
         db.commit()
 
+        stuff.reverse()
         for item in stuff:
             self.add_track(db, entry_type, item)
 
@@ -155,6 +156,8 @@ class HTTPMSSource(RB.BrowserSource):
             db.entry_set(entry, RB.RhythmDBPropType.ARTIST, item['artist'])
             db.entry_set(entry, RB.RhythmDBPropType.TITLE, item['title'])
             db.entry_set(entry, RB.RhythmDBPropType.ALBUM, item['album'])
+            db.entry_set(entry, RB.RhythmDBPropType.ALBUM_SORT_KEY,
+                         item['album_id'])
             db.entry_set(entry, RB.RhythmDBPropType.TRACK_NUMBER,
                          item['track'])
             db.entry_set(entry, RB.RhythmDBPropType.LAST_SEEN,
@@ -177,7 +180,7 @@ class HTTPMSSource(RB.BrowserSource):
             RB.RhythmDBPropType.LAST_SEEN,
             self.search_count,
         )
-        model = RB.RhythmDBQueryModel.new_empty(db)
+        model = RB.RhythmDBQueryModel.new_for_entry_type(db, entry_type, False)
 
         db.do_full_query_async_parsed(model, q)
         self.props.query_model = model

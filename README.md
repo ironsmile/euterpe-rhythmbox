@@ -32,5 +32,5 @@ The [Rhythmbox plug-in development guide](https://wiki.gnome.org/Apps/Rhythmbox/
 * Settings for chaning the HTTPMS address
 * Timeout in the search field. Searching should start 50-100ms after the user stops typing.
 * Track time
-* Sort tracks after search
+* ~~Sort tracks after search~~ (sort of done)
 * Some README explaination
