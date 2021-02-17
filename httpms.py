@@ -97,25 +97,6 @@ class HTTPMSSource(RB.BrowserSource):
             self.loader.cancel()
             self.loader = None
 
-    def do_search(self, arg1, arg2, term):
-        '''
-        Honestly I have no idea what arg1 and arg2 are.
-        '''
-
-        self.cancel_request()
-        self.new_model()
-
-        if len(term) < 2:
-            return
-
-        search_url = urllib.parse.urljoin(self.base, '/search/')
-
-        print("Searching for {}".format(term))
-
-        url = urllib.parse.urljoin(search_url, urllib.parse.quote(term))
-        self.loader = rb.Loader()
-        self.loader.get_url(url, self.search_tracks_api)
-
     def search_tracks_api(self, data):
         if data is None:
             print("No data in search_tracks_api callback")
@@ -131,12 +112,22 @@ class HTTPMSSource(RB.BrowserSource):
         db.entry_delete_by_type(entry_type)
         db.commit()
 
-        stuff.reverse()
         for item in stuff:
             self.add_track(db, entry_type, item)
 
+        self.props.load_status = RB.SourceLoadStatus.LOADED
+
     def setup(self):
         print("Running the setup")
+        self.props.show_browser = True
+        self.props.load_status = RB.SourceLoadStatus.LOADING
+        self.new_model()
+
+        self.cancel_request()
+        search_url = urllib.parse.urljoin(self.base, '/search/')
+        print("Loading HTTPMS into the database")
+        self.loader = rb.Loader()
+        self.loader.get_url(search_url, self.search_tracks_api)
 
     def add_track(self, db, entry_type, item):
 
