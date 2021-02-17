@@ -1,10 +1,13 @@
 # HTTPMS Plugin for Rhythmbox
 
-Using this plugin you can listen to your music served from a [HTTPMS server](https://github.com/ironsmile/httpms) directly in rhythmbox.
+Using this plugin you can listen to your music served from a [HTTPMS server](https://github.com/ironsmile/httpms) directly in Rhythmbox.
 
 ## Installation
 
-_Insert install instructions here_
+Create a directory and place the contents of this repository under one of the following:
+
+* `$HOME/.local/share/rhythmbox/plugins` - install for a single user
+* `/usr/lib/rhythmbox/plugins` - install for all users
 
 ## Configuration
 
@@ -19,6 +22,10 @@ After activating the plugin you will see a "HTTPMS" tab in the "Shared" group. I
 ## Development
 
 _Istrunctions for developers and contributers_
+
+## Cheat Sheet
+
+The [Rhythmbox plug-in development guide](https://wiki.gnome.org/Apps/Rhythmbox/Plugins/WritingGuide).
 
 ## TODO
 
