@@ -4,14 +4,17 @@ import json
 import gettext
 import urllib.parse
 import os.path
+import base64
 
-import rb
+from httpmsloader import Loader
 from gi.repository import GObject, RB, Peas, GLib, Gtk, GdkPixbuf
 
 gettext.install('rhythmbox', RB.locale_dir())
 
 # Change this once I find out how to create a "settings" dialog for the plugin
-HARD_CODED_SERVER_ADDRESS = 'http://httpms.example.com/'
+HARD_CODED_SERVER_ADDRESS = 'https://music.example.com/'
+HARD_CODED_USERNAME = ""
+HARD_CODED_PASSWORD = ""
 
 
 class HTTPMSPlugin(GObject.Object, Peas.Activatable):
@@ -83,7 +86,30 @@ class HTTPMSSource(RB.BrowserSource):
         self.loader = None
         self.selected = False
         self.search_count = 1
-        self.base = HARD_CODED_SERVER_ADDRESS
+
+        address = HARD_CODED_SERVER_ADDRESS
+        username = HARD_CODED_USERNAME
+        password = HARD_CODED_PASSWORD
+
+        self.address_base = address
+        self.address_with_auth = address
+        self.auth_headers = {}
+
+        if len(username) > 0:
+            up = urllib.parse.urlparse(address)
+            hostwithauth = "{}:{}@{}".format(
+                urllib.parse.quote(username, safe=''),
+                urllib.parse.quote(password, safe=''),
+                up.netloc,
+            )
+            up = up._replace(netloc=hostwithauth)
+            self.address_with_auth = up.geturl()
+
+            self.auth_headers["Authorization"] = "Basic {}".format(
+                base64.b64encode(
+                    "{}:{}".format(username, password).encode('utf-8'),
+                ).decode('ascii')
+            )
 
     def do_selected(self):
         if self.selected:
@@ -124,15 +150,28 @@ class HTTPMSSource(RB.BrowserSource):
         self.new_model()
 
         self.cancel_request()
-        search_url = urllib.parse.urljoin(self.base, '/search/')
+        search_url = urllib.parse.urljoin(self.address_base, '/search/')
         print("Loading HTTPMS into the database")
-        self.loader = rb.Loader()
+        self.loader = Loader()
+        self.loader.set_headers(self.auth_headers)
         self.loader.get_url(search_url, self.search_tracks_api)
+
+        self.art_store = RB.ExtDB(name="album-art")
+        shell = self.props.shell
+        player = shell.props.shell_player
+        player.connect('playing-song-changed', self.playing_entry_changed_cb)
 
     def add_track(self, db, entry_type, item):
 
-        play_url = urllib.parse.urljoin(self.base, '/file/')
-        play_url = urllib.parse.urljoin(play_url, '{}'.format(item['id']))
+        play_url = urllib.parse.urljoin(
+            self.address_with_auth,
+            '/file/{}'.format(item['id']),
+        )
+
+        album_url = urllib.parse.urljoin(
+            self.address_with_auth,
+            '/album/{}/artwork'.format(item['album_id']),
+        )
 
         entry = db.entry_lookup_by_location(play_url)
         if entry:
@@ -151,6 +190,8 @@ class HTTPMSSource(RB.BrowserSource):
                          item['album_id'])
             db.entry_set(entry, RB.RhythmDBPropType.TRACK_NUMBER,
                          item['track'])
+            db.entry_set(entry, RB.RhythmDBPropType.MB_ALBUMID,
+                         album_url)
             db.entry_set(entry, RB.RhythmDBPropType.LAST_SEEN,
                          self.search_count)
 
@@ -175,6 +216,22 @@ class HTTPMSSource(RB.BrowserSource):
 
         db.do_full_query_async_parsed(model, q)
         self.props.query_model = model
+
+    def playing_entry_changed_cb(self, player, entry):
+        if not entry:
+            return
+        if entry.get_entry_type() != self.props.entry_type:
+            return
+
+        au = entry.get_string(RB.RhythmDBPropType.MB_ALBUMID)
+        if au:
+            key = RB.ExtDBKey.create_storage(
+                "title", entry.get_string(RB.RhythmDBPropType.TITLE))
+            key.add_field("artist", entry.get_string(
+                RB.RhythmDBPropType.ARTIST))
+            key.add_field("album", entry.get_string(
+                RB.RhythmDBPropType.ALBUM))
+            self.art_store.store_uri(key, RB.ExtDBSourceType.EMBEDDED, au)
 
 
 GObject.type_register(HTTPMSSource)
