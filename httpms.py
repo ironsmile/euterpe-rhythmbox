@@ -82,7 +82,12 @@ class HTTPMSSource(RB.BrowserSource):
         self.search_count = 1
         self.logged_in = False
 
-    def use_auth(self, address, username, password):
+    def use_auth(self, address, username="", password=""):
+        '''
+        Stores the address, username and password in the plugin's memory for
+        use when API or song requests are made to the HTTPMS server. username
+        and password may be empty strings.
+        '''
         self.address_base = address
         self.address_with_auth = address
         self.auth_headers = {}
@@ -102,6 +107,10 @@ class HTTPMSSource(RB.BrowserSource):
         self.logged_in = True
 
     def get_address_with_basicauth_in_host(self, address, username, password):
+        '''
+        Inserts the username and password into the address hostname. For
+        HTTP basic authentication. And returns the result.
+        '''
         up = urllib.parse.urlparse(address)
         hostwithauth = "{}:{}@{}".format(
             urllib.parse.quote(username, safe=''),
@@ -112,6 +121,10 @@ class HTTPMSSource(RB.BrowserSource):
         return up.geturl()
 
     def get_basic_auth_header(self, username, password):
+        '''
+        Returns the HTTP Basic Authentication header for the given username
+        and password.
+        '''
         return "Basic {}".format(
             base64.b64encode(
                 "{}:{}".format(username, password).encode('utf-8'),
@@ -119,18 +132,32 @@ class HTTPMSSource(RB.BrowserSource):
         )
 
     def do_selected(self):
+        '''
+        Executed when the HTTPMS plugin is selected in the Rhythmbox plugin
+        list.
+        '''
         if self.selected:
             return
         self.selected = True
         self.setup()
 
     def cancel_request(self):
+        '''
+        Cancels any ongoing request to the server REST API for getting
+        songs meta data.
+        '''
         if self.loader:
             print("Cancelling ongoing search")
             self.loader.cancel()
             self.loader = None
 
     def search_tracks_api(self, data):
+        '''
+        This functions loads 'data' into the source's database. The data is
+        assumed to be a JSON with a list of tracks. It must be a list of
+        tracks like the one returned from searching into the HTTPMS via its
+        REST API.
+        '''
         if data is None:
             print("No data in search_tracks_api callback")
             return
@@ -151,6 +178,13 @@ class HTTPMSSource(RB.BrowserSource):
         self.props.load_status = RB.SourceLoadStatus.LOADED
 
     def setup(self):
+        '''
+        This function loads the plugin initial view. It is responsible
+        for setting up its GTK widgets, loading its data from the plugin's
+        data file and generally setting up its state. At the end of
+        this function the plugin should be usable.
+        '''
+
         print("Running the setup")
 
         self.saved_entry_view = self.get_entry_view()
@@ -231,6 +265,10 @@ class HTTPMSSource(RB.BrowserSource):
         )
 
     def show_login_screen(self):
+        '''
+        Hides the browser and entry list view. In their place shows the
+        login screen.
+        '''
         self.login_win.show()
         self.grid.hide()
 
@@ -251,6 +289,9 @@ class HTTPMSSource(RB.BrowserSource):
         self.loader.get_url(search_url, self.search_tracks_api)
 
     def add_track(self, db, entry_type, item):
+        '''
+        Adds this track to the source's database.
+        '''
 
         # track_url is the canonical unique URL for this track.
         track_url = urllib.parse.urljoin(
@@ -318,6 +359,10 @@ class HTTPMSSource(RB.BrowserSource):
         self.props.query_model = model
 
     def playing_entry_changed_cb(self, player, entry):
+        '''
+        playing_entry_changed_cb changes the album artwork on every
+        track change.
+        '''
         if not entry:
             return
         if entry.get_entry_type() != self.props.entry_type:
@@ -334,6 +379,12 @@ class HTTPMSSource(RB.BrowserSource):
             self.art_store.store_uri(key, RB.ExtDBSourceType.EMBEDDED, au)
 
     def login_button_clicked_cb(self, data):
+        '''
+        This function is bound to the login button. It uses the data from
+        the entry fields and tries them with the remote server. If the
+        request is successful then it stores them into the plugin settings
+        and shows the browser and entry list instead of the login form.
+        '''
         url_entry = self.builder.get_object("server_url")
         username_entry = self.builder.get_object("service_username")
         password_entry = self.builder.get_object("service_password")
@@ -369,6 +420,15 @@ class HTTPMSSource(RB.BrowserSource):
         loader.get_url(try_url, self.try_auth_credentials_callback)
 
     def try_auth_credentials_callback(self, data):
+        '''
+        This callback is called from the request which tries the server
+        address and auth credentials. If they are OK data will not be a
+        None. In this case the credentials are stored and the server data
+        is loaded into the source's database.
+
+        If the credentials are not OK then the login form is made active
+        again so that the user can other address/credentials.
+        '''
         self.builder.get_object("server_url").set_sensitive(True)
         self.builder.get_object("service_username").set_sensitive(True)
         self.builder.get_object("service_password").set_sensitive(True)
@@ -396,9 +456,17 @@ class HTTPMSSource(RB.BrowserSource):
         self.grid.show()
 
     def user_logged_in(self):
+        '''
+        Returns true if there is an active server address and possibly auth
+        credentials stored in the source's memory.
+        '''
         return self.logged_in
 
     def load_auth_data(self):
+        '''
+        Reads the plugin data file and tries to load its content into the
+        source's memory. It looks for server address and credentials.
+        '''
         file_name = self.key_file_name()
         if file_name is None:
             print('Could not load the user data directory')
@@ -419,11 +487,16 @@ class HTTPMSSource(RB.BrowserSource):
             address = kf.get_string("auth", "address")
             username = kf.get_string("auth", "username")
             password = kf.get_string("auth", "password")
-            self.use_auth(address, username, password)
+            if len(address) > 0:
+                self.use_auth(address, username, password)
         except GLib.Error as err:
             print('Reading auth file error: {}'.format(err))
 
     def store_auth_data(self, address, username, password):
+        '''
+        Stores the provided server address and auth credentials in the
+        plugin's data file.
+        '''
         file_name = self.key_file_name()
         if file_name is None:
             print('Could not load the user data directory')
@@ -440,6 +513,11 @@ class HTTPMSSource(RB.BrowserSource):
             print('Saving auth data to file: {}'.format(err))
 
     def key_file_name(self):
+        '''
+        Returns the name (on the file system) of the plugin's data
+        file. This file is used to store settings between different
+        runs of the plugin.
+        '''
         data_dir = RB.user_data_dir()
         if data_dir is None:
             return None
