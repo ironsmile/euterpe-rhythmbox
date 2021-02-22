@@ -70,10 +70,8 @@ class HTTPMSEntryType(RB.RhythmDBEntryType):
     def do_can_sync_metadata(self, entry):
         return False
 
-    def get_playback_uri(self, entry):
-        playback_url = entry.get_string(RB.RhythmDBPropType.MOUNTPOINT)
-        print('Returning playback uri: {}'.format(playback_url))
-        return playback_url
+    def do_get_playback_uri(self, entry):
+        return entry.get_string(RB.RhythmDBPropType.MOUNTPOINT)
 
 
 class HTTPMSSource(RB.BrowserSource):
@@ -254,6 +252,15 @@ class HTTPMSSource(RB.BrowserSource):
 
     def add_track(self, db, entry_type, item):
 
+        # track_url is the canonical unique URL for this track.
+        track_url = urllib.parse.urljoin(
+            self.address_base,
+            '/file/{}'.format(item['id']),
+        )
+
+        # play_url is the URL at which this track can be loaded.
+        # Sometimes this can be different from track_url. For
+        # example when the URL includes a token or basic auth.
         play_url = urllib.parse.urljoin(
             self.address_with_auth,
             '/file/{}'.format(item['id']),
@@ -264,7 +271,7 @@ class HTTPMSSource(RB.BrowserSource):
             '/album/{}/artwork'.format(item['album_id']),
         )
 
-        entry = db.entry_lookup_by_location(play_url)
+        entry = db.entry_lookup_by_location(track_url)
         if entry:
             db.entry_set(
                 entry,
@@ -272,13 +279,15 @@ class HTTPMSSource(RB.BrowserSource):
                 self.search_count,
             )
         else:
-            entry = RB.RhythmDBEntry.new(db, entry_type, play_url)
+            entry = RB.RhythmDBEntry.new(db, entry_type, track_url)
             db.entry_set(entry, RB.RhythmDBPropType.MOUNTPOINT, play_url)
             db.entry_set(entry, RB.RhythmDBPropType.ARTIST, item['artist'])
             db.entry_set(entry, RB.RhythmDBPropType.TITLE, item['title'])
             db.entry_set(entry, RB.RhythmDBPropType.ALBUM, item['album'])
             db.entry_set(entry, RB.RhythmDBPropType.ALBUM_SORT_KEY,
                          item['album_id'])
+            db.entry_set(entry, RB.RhythmDBPropType.COMMENT,
+                         'Album {}'.format(item['album_id']))
             db.entry_set(entry, RB.RhythmDBPropType.TRACK_NUMBER,
                          item['track'])
             db.entry_set(entry, RB.RhythmDBPropType.MB_ALBUMID,
