@@ -161,6 +161,8 @@ class HTTPMSSource(RB.BrowserSource):
         for child in self.get_children():
             self.grid = child
 
+        self.fix_browser_size()
+
         self.builder = Gtk.Builder()
 
         ui_file = os.path.join(
@@ -183,17 +185,52 @@ class HTTPMSSource(RB.BrowserSource):
         else:
             self.show_login_screen()
 
-        self.bind_settings(
-            self.saved_entry_view,
-            None,
-            None,
-            True,
-        )
+        self.bind_settings_dynamic()
 
         self.art_store = RB.ExtDB(name="album-art")
         shell = self.props.shell
         player = shell.props.shell_player
         player.connect('playing-song-changed', self.playing_entry_changed_cb)
+
+    def fix_browser_size(self):
+        '''
+        For whatever reason the Gtk.Panel divider by default is way too
+        close to the top element. WHich is the browser for albums
+        and artists. And its position is not remembered between runs.
+        So on setup we set it to a more reasonable value here.
+        '''
+        for gch in self.grid.get_children():
+            if not isinstance(gch, Gtk.Paned):
+                continue
+            gch.set_position(200)
+            break
+
+    def bind_settings_dynamic(self):
+        '''
+        This method finds the Gtk.Paned and Rb.LibraryBrowser from the source
+        children tree and binds their settings.
+        '''
+        paned = None
+        browser = None
+
+        for gch in self.grid.get_children():
+            if not isinstance(gch, Gtk.Paned):
+                continue
+            paned = gch
+            for pch in paned.get_children():
+                if not isinstance(pch, RB.LibraryBrowser):
+                    continue
+                browser = pch
+                break
+            break
+
+        print('Binding settings')
+        self.bind_settings(
+            self.saved_entry_view,
+            paned,
+            browser,
+            True,
+        )
 
     def show_login_screen(self):
         self.login_win.show()
