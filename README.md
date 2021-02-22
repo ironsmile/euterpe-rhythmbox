@@ -11,7 +11,7 @@ Create a directory and place the contents of this repository under one of the fo
 
 ## Configuration
 
-_Insert configuration instructions here_
+There is no need for any configuration. It is all done via the plugin's UI on first activation. One will have to enter their HTTPMS address and optionally authentication if the server is protected. That's it!
 
 ## Usage
 
