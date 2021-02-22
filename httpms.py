@@ -128,7 +128,7 @@ class HTTPMSSource(RB.BrowserSource):
 
     def cancel_request(self):
         if self.loader:
-            print("cancelling ongoing search")
+            print("Cancelling ongoing search")
             self.loader.cancel()
             self.loader = None
 
@@ -335,7 +335,7 @@ class HTTPMSSource(RB.BrowserSource):
         self.try_password = password_entry.get_text()
 
         if self.try_url == "":
-            print('empty URL is not accepted')
+            print('Empty URL is not accepted')
             return
 
         if not self.try_url.startswith("http://") or \
@@ -366,7 +366,7 @@ class HTTPMSSource(RB.BrowserSource):
         self.builder.get_object("login_button").set_sensitive(True)
 
         if data is None:
-            print("authentication unsuccessful")
+            print("Authentication unsuccessful")
             del self.try_url
             del self.try_username
             del self.try_password
@@ -392,7 +392,7 @@ class HTTPMSSource(RB.BrowserSource):
     def load_auth_data(self):
         file_name = self.key_file_name()
         if file_name is None:
-            print('could not load the user data directory')
+            print('Could not load the user data directory')
             return
 
         kf = GLib.KeyFile.new()
@@ -401,7 +401,7 @@ class HTTPMSSource(RB.BrowserSource):
         try:
             loaded = kf.load_from_file(file_name, GLib.KeyFileFlags.NONE)
         except GLib.Error as err:
-            print('loading auth file error: {}'.format(err))
+            print('Loading auth file error: {}'.format(err))
 
         if not loaded:
             return
@@ -412,12 +412,12 @@ class HTTPMSSource(RB.BrowserSource):
             password = kf.get_string("auth", "password")
             self.use_auth(address, username, password)
         except GLib.Error as err:
-            print('reading auth file error: {}'.format(err))
+            print('Reading auth file error: {}'.format(err))
 
     def store_auth_data(self, address, username, password):
         file_name = self.key_file_name()
         if file_name is None:
-            print('could not load the user data directory')
+            print('Could not load the user data directory')
             return
 
         kf = GLib.KeyFile.new()
@@ -428,7 +428,7 @@ class HTTPMSSource(RB.BrowserSource):
         try:
             kf.save_to_file(file_name)
         except GLib.Error as err:
-            print('saving auth data to file: {}'.format(err))
+            print('Saving auth data to file: {}'.format(err))
 
     def key_file_name(self):
         data_dir = RB.user_data_dir()
