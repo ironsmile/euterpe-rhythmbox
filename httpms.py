@@ -11,11 +11,6 @@ from gi.repository import GObject, RB, Peas, GLib, Gtk, GdkPixbuf
 
 gettext.install('rhythmbox', RB.locale_dir())
 
-# Change this once I find out how to create a "settings" dialog for the plugin
-HARD_CODED_SERVER_ADDRESS = 'https://music.example.com/'
-HARD_CODED_USERNAME = ""
-HARD_CODED_PASSWORD = ""
-
 
 class HTTPMSPlugin(GObject.Object, Peas.Activatable):
     object = GObject.property(type=GObject.Object)
@@ -35,6 +30,7 @@ class HTTPMSPlugin(GObject.Object, Peas.Activatable):
         self.source = GObject.new(HTTPMSSource,
                                   shell=shell,
                                   name=("HTTPMS"),
+                                  plugin=self,
                                   query_model=model,
                                   entry_type=entry_type)
 
@@ -86,30 +82,43 @@ class HTTPMSSource(RB.BrowserSource):
         self.loader = None
         self.selected = False
         self.search_count = 1
+        self.logged_in = False
 
-        address = HARD_CODED_SERVER_ADDRESS
-        username = HARD_CODED_USERNAME
-        password = HARD_CODED_PASSWORD
-
+    def use_auth(self, address, username, password):
         self.address_base = address
         self.address_with_auth = address
         self.auth_headers = {}
 
         if len(username) > 0:
-            up = urllib.parse.urlparse(address)
-            hostwithauth = "{}:{}@{}".format(
-                urllib.parse.quote(username, safe=''),
-                urllib.parse.quote(password, safe=''),
-                up.netloc,
+            self.address_with_auth = self.get_address_with_basicauth_in_host(
+                address,
+                username,
+                password,
             )
-            up = up._replace(netloc=hostwithauth)
-            self.address_with_auth = up.geturl()
 
-            self.auth_headers["Authorization"] = "Basic {}".format(
-                base64.b64encode(
-                    "{}:{}".format(username, password).encode('utf-8'),
-                ).decode('ascii')
+            self.auth_headers["Authorization"] = self.get_basic_auth_header(
+                username,
+                password,
             )
+
+        self.logged_in = True
+
+    def get_address_with_basicauth_in_host(self, address, username, password):
+        up = urllib.parse.urlparse(address)
+        hostwithauth = "{}:{}@{}".format(
+            urllib.parse.quote(username, safe=''),
+            urllib.parse.quote(password, safe=''),
+            up.netloc,
+        )
+        up = up._replace(netloc=hostwithauth)
+        return up.geturl()
+
+    def get_basic_auth_header(self, username, password):
+        return "Basic {}".format(
+            base64.b64encode(
+                "{}:{}".format(username, password).encode('utf-8'),
+            ).decode('ascii')
+        )
 
     def do_selected(self):
         if self.selected:
@@ -145,7 +154,57 @@ class HTTPMSSource(RB.BrowserSource):
 
     def setup(self):
         print("Running the setup")
+
+        self.saved_entry_view = self.get_entry_view()
         self.props.show_browser = True
+
+        for child in self.get_children():
+            self.grid = child
+
+        self.builder = Gtk.Builder()
+
+        ui_file = os.path.join(
+            Peas.PluginInfo.get_module_dir(self.props.plugin.plugin_info),
+            "httpms-rhythmbox.glade",
+        )
+
+        self.builder.add_from_file(ui_file)
+        self.builder.connect_signals(self)
+
+        self.login_win = self.builder.get_object("login_scroll_view")
+        self.pack_start(self.login_win, expand=True, fill=True, padding=0)
+        self.reorder_child(self.login_win, 0)
+        self.login_win.show_all()
+
+        self.load_auth_data()
+
+        if self.user_logged_in():
+            self.load_upstream_data()
+        else:
+            self.show_login_screen()
+
+        self.bind_settings(
+            self.saved_entry_view,
+            None,
+            None,
+            True,
+        )
+
+        self.art_store = RB.ExtDB(name="album-art")
+        shell = self.props.shell
+        player = shell.props.shell_player
+        player.connect('playing-song-changed', self.playing_entry_changed_cb)
+
+    def show_login_screen(self):
+        self.login_win.show()
+        self.grid.hide()
+
+    def load_upstream_data(self):
+        '''
+        Makes a request to the upstream server and gets all the data for
+        tracks. Then loads them into the source's database.
+        '''
+        self.login_win.hide()
         self.props.load_status = RB.SourceLoadStatus.LOADING
         self.new_model()
 
@@ -155,11 +214,6 @@ class HTTPMSSource(RB.BrowserSource):
         self.loader = Loader()
         self.loader.set_headers(self.auth_headers)
         self.loader.get_url(search_url, self.search_tracks_api)
-
-        self.art_store = RB.ExtDB(name="album-art")
-        shell = self.props.shell
-        player = shell.props.shell_player
-        player.connect('playing-song-changed', self.playing_entry_changed_cb)
 
     def add_track(self, db, entry_type, item):
 
@@ -232,6 +286,119 @@ class HTTPMSSource(RB.BrowserSource):
             key.add_field("album", entry.get_string(
                 RB.RhythmDBPropType.ALBUM))
             self.art_store.store_uri(key, RB.ExtDBSourceType.EMBEDDED, au)
+
+    def login_button_clicked_cb(self, data):
+        url_entry = self.builder.get_object("server_url")
+        username_entry = self.builder.get_object("service_username")
+        password_entry = self.builder.get_object("service_password")
+        login_button = self.builder.get_object('login_button')
+
+        self.try_url = url_entry.get_text().strip()
+        self.try_username = username_entry.get_text().strip()
+        self.try_password = password_entry.get_text()
+
+        if self.try_url == "":
+            print('empty URL is not accepted')
+            return
+
+        if not self.try_url.startswith("http://") or \
+                not self.try_url.startswith("https://"):
+            self.try_url = 'https://{}'.forat(self.try_url)
+
+        url_entry.set_sensitive(False)
+        username_entry.set_sensitive(False)
+        password_entry.set_sensitive(False)
+        login_button.set_sensitive(False)
+
+        try_url = urllib.parse.urljoin(self.try_url, '/search/')
+        try_url += '?=absolutelynotthereonehundredpercent'
+
+        loader = Loader()
+        loader.set_headers({
+            "Authorization": self.get_basic_auth_header(
+                self.try_username,
+                self.try_password,
+            )
+        })
+        loader.get_url(try_url, self.try_auth_credentials_callback)
+
+    def try_auth_credentials_callback(self, data):
+        self.builder.get_object("server_url").set_sensitive(True)
+        self.builder.get_object("service_username").set_sensitive(True)
+        self.builder.get_object("service_password").set_sensitive(True)
+        self.builder.get_object("login_button").set_sensitive(True)
+
+        if data is None:
+            print("authentication unsuccessful")
+            del self.try_url
+            del self.try_username
+            del self.try_password
+            return
+
+        self.use_auth(self.try_url, self.try_username, self.try_password)
+        self.store_auth_data(
+            self.try_url,
+            self.try_username,
+            self.try_password,
+        )
+
+        del self.try_url
+        del self.try_username
+        del self.try_password
+
+        self.load_upstream_data()
+        self.grid.show()
+
+    def user_logged_in(self):
+        return self.logged_in
+
+    def load_auth_data(self):
+        file_name = self.key_file_name()
+        if file_name is None:
+            print('could not load the user data directory')
+            return
+
+        kf = GLib.KeyFile.new()
+
+        loaded = False
+        try:
+            loaded = kf.load_from_file(file_name, GLib.KeyFileFlags.NONE)
+        except GLib.Error as err:
+            print('loading auth file error: {}'.format(err))
+
+        if not loaded:
+            return
+
+        try:
+            address = kf.get_string("auth", "address")
+            username = kf.get_string("auth", "username")
+            password = kf.get_string("auth", "password")
+            self.use_auth(address, username, password)
+        except GLib.Error as err:
+            print('reading auth file error: {}'.format(err))
+
+    def store_auth_data(self, address, username, password):
+        file_name = self.key_file_name()
+        if file_name is None:
+            print('could not load the user data directory')
+            return
+
+        kf = GLib.KeyFile.new()
+        kf.set_string("auth", "address", address)
+        kf.set_string("auth", "username", username)
+        kf.set_string("auth", "password", password)
+
+        try:
+            kf.save_to_file(file_name)
+        except GLib.Error as err:
+            print('saving auth data to file: {}'.format(err))
+
+    def key_file_name(self):
+        data_dir = RB.user_data_dir()
+        if data_dir is None:
+            return None
+
+        return os.path.join(data_dir, "httpms.auth")
 
 
 GObject.type_register(HTTPMSSource)
