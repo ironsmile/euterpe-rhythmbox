@@ -189,6 +189,7 @@ class HTTPMSSource(RB.BrowserSource):
 
         self.saved_entry_view = self.get_entry_view()
         self.props.show_browser = True
+        self.saved_entry_view.props.sort_order = "Track,ascending"
 
         for child in self.get_children():
             self.grid = child
