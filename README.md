@@ -40,3 +40,4 @@ But really, almost nothing is documented. And where there are guides and documen
 * ~~Preserve Browser size~~
 * ~~Logout Button~~
 * Automatic Logout on wrong credentials
+* Authentication with query token when HTTPMS gets a support for it
