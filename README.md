@@ -38,5 +38,5 @@ But really, almost nothing is documented. And where there are guides and documen
 * Track time
 * ~~Sort tracks after search~~ (sort of done)
 * ~~Preserve Browser size~~
-* Logout Button
+* ~~Logout Button~~
 * Automatic Logout on wrong credentials
