@@ -61,10 +61,9 @@ Author: Doychin Atanasov
               <object class="GtkEntry" id="server_url">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">The URL address of your HTTPMS installation. Such as https://music.example.com. If the protocol is omitted then HTTPS is assumed.</property>
                 <property name="width_chars">32</property>
                 <property name="primary_icon_stock">gtk-index</property>
-                <property name="secondary_icon_stock">gtk-info</property>
-                <property name="secondary_icon_tooltip_text" translatable="yes">The URL address of your HTTPMS installation. Such as https://music.example.com. If the protocol is omitted then HTTPS is assumed.</property>
                 <property name="placeholder_text" translatable="yes">https://music.example.com</property>
                 <property name="input_purpose">url</property>
               </object>
@@ -91,9 +90,8 @@ Author: Doychin Atanasov
               <object class="GtkEntry" id="service_username">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Your username for this HTTPMS installation. Such as "JohnDoe". If the server configuration does not require authentication this can be left blank field blank.</property>
                 <property name="primary_icon_stock">gtk-orientation-portrait</property>
-                <property name="secondary_icon_stock">gtk-info</property>
-                <property name="secondary_icon_tooltip_text" translatable="yes">Your username for this HTTPMS installation. Such as "JohnDoe". If the server configuration does not require authentication this can be left blank field blank.</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -118,10 +116,9 @@ Author: Doychin Atanasov
               <object class="GtkEntry" id="service_password">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Your password for the username in this HTTPMS installation. If the server configuration does not require authentication this field can be left blank.</property>
                 <property name="visibility">False</property>
                 <property name="primary_icon_stock">gtk-dialog-authentication</property>
-                <property name="secondary_icon_stock">gtk-info</property>
-                <property name="secondary_icon_tooltip_text" translatable="yes">Your password for the username in this HTTPMS installation. If the server configuration does not require authentication this field can be left blank.</property>
                 <property name="input_purpose">password</property>
               </object>
               <packing>
@@ -187,10 +184,31 @@ Author: Doychin Atanasov
               </packing>
             </child>
             <child>
-              <placeholder/>
+              <object class="GtkSpinner" id="login_spinner">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">5</property>
+              </packing>
             </child>
             <child>
-              <placeholder/>
+              <object class="GtkLabel" id="login_failed_indicator">
+                <property name="sensitive">False</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Failed!</property>
+                <property name="justify">right</property>
+                <property name="ellipsize">start</property>
+                <attributes>
+                  <attribute name="weight" value="bold"/>
+                  <attribute name="foreground" value="#f5f579790000"/>
+                </attributes>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">5</property>
+              </packing>
             </child>
           </object>
         </child>

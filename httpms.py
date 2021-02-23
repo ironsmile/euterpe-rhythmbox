@@ -194,6 +194,7 @@ class HTTPMSSource(RB.BrowserSource):
             self.grid = child
 
         self.fix_browser_size()
+        self.add_menu_buttons()
 
         self.builder = Gtk.Builder()
 
@@ -208,8 +209,17 @@ class HTTPMSSource(RB.BrowserSource):
         self.login_win = self.builder.get_object("login_scroll_view")
         self.pack_start(self.login_win, expand=True, fill=True, padding=0)
         self.reorder_child(self.login_win, 0)
-        self.login_win.show_all()
 
+        self.login_spinner = self.builder.get_object("login_spinner")
+        self.failed_indicator = self.builder.get_object(
+            "login_failed_indicator",
+        )
+        self.login_entry_address = self.builder.get_object("server_url")
+        self.login_entry_user = self.builder.get_object("service_username")
+        self.login_entry_pass = self.builder.get_object("service_password")
+        self.login_button = self.builder.get_object("login_button")
+
+        self.login_win.show()
         self.load_auth_data()
 
         if self.user_logged_in():
@@ -263,6 +273,59 @@ class HTTPMSSource(RB.BrowserSource):
             browser,
             True,
         )
+
+    def add_menu_buttons(self):
+        '''
+        Adds the Sync and Logout buttons to the source menu, next to the
+        search bar.
+        '''
+        source_toolbar = None
+        for gch in self.grid.get_children():
+            if isinstance(gch, RB.SourceToolbar):
+                source_toolbar = gch
+                break
+
+        if source_toolbar is None:
+            print('Unable to add menu buttons: RB.SourceToolbar was not found')
+            return
+
+        toolbar = None
+        for tch in source_toolbar.get_children():
+            if isinstance(tch, Gtk.Toolbar):
+                toolbar = tch
+                break
+
+        if toolbar is None:
+            print('Unable to add menu buttons: Gtk.Toolbar was not found')
+            return
+
+        logout = Gtk.ToolButton.new(None, "Logout")
+        sync = Gtk.ToolButton.new(None, "Sync")
+        sync.connect('clicked', self.sync_clicked_cb)
+        logout.connect('clicked', self.logout_clicked_cb)
+
+        toolbar.add(sync)
+        toolbar.add(logout)
+
+        logout.show()
+        sync.show()
+
+    def sync_clicked_cb(self, btn):
+        self.load_upstream_data()
+
+    def logout_clicked_cb(self, btn):
+        self.store_auth_data("", "", "")
+        self.logged_in = False
+        self.login_entry_address.set_text("")
+        self.builder.get_object("service_username").set_text("")
+        self.builder.get_object("service_password").set_text("")
+
+        self.show_login_screen()
+
+        db = self.props.shell.props.db
+        entry_type = self.props.entry_type
+        db.entry_delete_by_type(entry_type)
+        db.commit()
 
     def show_login_screen(self):
         '''
@@ -385,14 +448,9 @@ class HTTPMSSource(RB.BrowserSource):
         request is successful then it stores them into the plugin settings
         and shows the browser and entry list instead of the login form.
         '''
-        url_entry = self.builder.get_object("server_url")
-        username_entry = self.builder.get_object("service_username")
-        password_entry = self.builder.get_object("service_password")
-        login_button = self.builder.get_object('login_button')
-
-        self.try_url = url_entry.get_text().strip()
-        self.try_username = username_entry.get_text().strip()
-        self.try_password = password_entry.get_text()
+        self.try_url = self.login_entry_address.get_text().strip()
+        self.try_username = self.login_entry_user.get_text().strip()
+        self.try_password = self.login_entry_pass.get_text()
 
         if self.try_url == "":
             print('Empty URL is not accepted')
@@ -400,12 +458,14 @@ class HTTPMSSource(RB.BrowserSource):
 
         if not self.try_url.startswith("http://") or \
                 not self.try_url.startswith("https://"):
-            self.try_url = 'https://{}'.forat(self.try_url)
+            self.try_url = 'https://{}'.format(self.try_url)
 
-        url_entry.set_sensitive(False)
-        username_entry.set_sensitive(False)
-        password_entry.set_sensitive(False)
-        login_button.set_sensitive(False)
+        self.login_entry_address.set_sensitive(False)
+        self.login_entry_user.set_sensitive(False)
+        self.login_entry_pass.set_sensitive(False)
+        self.login_button.set_sensitive(False)
+        self.login_spinner.props.active = True
+        self.failed_indicator.hide()
 
         try_url = urllib.parse.urljoin(self.try_url, '/search/')
         try_url += '?=absolutelynotthereonehundredpercent'
@@ -429,13 +489,15 @@ class HTTPMSSource(RB.BrowserSource):
         If the credentials are not OK then the login form is made active
         again so that the user can other address/credentials.
         '''
-        self.builder.get_object("server_url").set_sensitive(True)
-        self.builder.get_object("service_username").set_sensitive(True)
-        self.builder.get_object("service_password").set_sensitive(True)
-        self.builder.get_object("login_button").set_sensitive(True)
+        self.login_entry_address.set_sensitive(True)
+        self.login_entry_user.set_sensitive(True)
+        self.login_entry_pass.set_sensitive(True)
+        self.login_button.set_sensitive(True)
+        self.login_spinner.props.active = False
 
         if data is None:
             print("Authentication unsuccessful")
+            self.failed_indicator.show()
             del self.try_url
             del self.try_username
             del self.try_password
