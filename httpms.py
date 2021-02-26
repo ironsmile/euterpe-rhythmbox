@@ -316,9 +316,19 @@ class HTTPMSSource(RB.BrowserSource):
         sync.show()
 
     def sync_clicked_cb(self, btn):
+        '''
+        Executed when the "Sync" button in clicked. This method clears the
+        source database and makes a request for the latest data from the
+        server.
+        '''
         self.load_upstream_data()
 
     def logout_clicked_cb(self, btn):
+        '''
+        Executed when the logout button is pressed. The method clears the
+        source database, removes the stored credentials and shows the login
+        page.
+        '''
         self.store_auth_data("", "", "")
         self.logged_in = False
         self.login_entry_address.set_text("")
