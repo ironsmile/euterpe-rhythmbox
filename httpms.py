@@ -167,7 +167,11 @@ class HTTPMSSource(RB.BrowserSource):
         entry_type = self.props.entry_type
 
         data = data.decode('utf-8')
-        stuff = json.loads(data)
+        try:
+            stuff = json.loads(data)
+        except Exception as err:
+            print('Error decoding server response: {}'.format(err))
+            return
 
         db.entry_delete_by_type(entry_type)
         db.commit()
