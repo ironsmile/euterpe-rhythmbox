@@ -403,10 +403,12 @@ class HTTPMSSource(RB.BrowserSource):
             db.entry_set(entry, RB.RhythmDBPropType.ARTIST, item['artist'])
             db.entry_set(entry, RB.RhythmDBPropType.TITLE, item['title'])
             db.entry_set(entry, RB.RhythmDBPropType.ALBUM, item['album'])
+            db.entry_set(entry, RB.RhythmDBPropType.ALBUM_SORTNAME,
+                         str(item['album_id']))
             db.entry_set(entry, RB.RhythmDBPropType.ALBUM_SORT_KEY,
                          item['album_id'])
             db.entry_set(entry, RB.RhythmDBPropType.COMMENT,
-                         'Album {}'.format(item['album_id']))
+                         '{}'.format(item['format']))
             db.entry_set(entry, RB.RhythmDBPropType.TRACK_NUMBER,
                          item['track'])
             db.entry_set(entry, RB.RhythmDBPropType.MB_ALBUMID,
