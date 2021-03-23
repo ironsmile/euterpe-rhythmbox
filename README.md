@@ -35,7 +35,7 @@ But really, almost nothing is documented. And where there are guides and documen
 
 * ~~Settings for setting the HTTPMS address and access tokens~~
 * ~~Timeout in the search field. Searching should start 50-100ms after the user stops typing.~~
-* Track time
+* ~~Track time~~
 * ~~Sort tracks after search~~ (sort of done)
 * ~~Preserve Browser size~~
 * ~~Logout Button~~

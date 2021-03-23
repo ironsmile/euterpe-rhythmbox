@@ -415,6 +415,9 @@ class HTTPMSSource(RB.BrowserSource):
                          album_url)
             db.entry_set(entry, RB.RhythmDBPropType.LAST_SEEN,
                          self.search_count)
+            if item['duration'] > 0:
+                db.entry_set(entry, RB.RhythmDBPropType.DURATION,
+                             item['duration'] / 1000)
 
         db.commit()
 
