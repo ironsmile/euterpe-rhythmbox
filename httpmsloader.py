@@ -8,9 +8,9 @@ from httpmsconfig import plugin_version
 USER_AGENT = "HTTPS-Rhythmbox-Plugin/{}".format(plugin_version)
 
 
-def call_callback(callback, data, args):
+def call_callback(callback, status, data, args):
     try:
-        v = callback(data, *args)
+        v = callback(status, data, *args)
         return v
     except Exception:
         sys.excepthook(*sys.exc_info())
@@ -30,14 +30,15 @@ class Loader(object):
 
     def _message_cb(self, session, message, data):
         status = message.props.status_code
-        if status == 200:
+        if status >= 200 and status <= 299:
             call_callback(
                 self.callback,
+                status,
                 message.props.response_body_data.get_data(),
                 self.args,
             )
         else:
-            call_callback(self.callback, None, self.args)
+            call_callback(self.callback, status, None, self.args)
 
     def set_headers(self, headers):
         self.headers = headers
@@ -51,6 +52,21 @@ class Loader(object):
             req = Soup.Message.new("GET", url)
             for k, v in self.headers.items():
                 req.props.request_headers.append(k, v)
+            loader_session.queue_message(req, self._message_cb, None)
+        except Exception:
+            sys.excepthook(*sys.exc_info())
+            callback(None, *args)
+
+    def post_url(self, url, callback, content_type, body, *args):
+        self.url = url
+        self.callback = callback
+        self.args = args
+        try:
+            global loader_session
+            req = Soup.Message.new("POST", url)
+            for k, v in self.headers.items():
+                req.props.request_headers.append(k, v)
+            req.set_request(content_type, Soup.MemoryUse.STATIC, body)
             loader_session.queue_message(req, self._message_cb, None)
         except Exception:
             sys.excepthook(*sys.exc_info())

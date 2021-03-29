@@ -4,7 +4,6 @@ import json
 import gettext
 import urllib.parse
 import os.path
-import base64
 
 from httpmsloader import Loader
 from gi.repository import GObject, RB, Peas, GLib, Gtk, GdkPixbuf
@@ -82,54 +81,21 @@ class HTTPMSSource(RB.BrowserSource):
         self.search_count = 1
         self.logged_in = False
 
-    def use_auth(self, address, username="", password=""):
+    def use_auth(self, address, token=""):
         '''
         Stores the address, username and password in the plugin's memory for
         use when API or song requests are made to the HTTPMS server. username
         and password may be empty strings.
         '''
         self.address_base = address
-        self.address_with_auth = address
+        self.auth_token = ""
         self.auth_headers = {}
 
-        if len(username) > 0:
-            self.address_with_auth = self.get_address_with_basicauth_in_host(
-                address,
-                username,
-                password,
-            )
-
-            self.auth_headers["Authorization"] = self.get_basic_auth_header(
-                username,
-                password,
-            )
+        if len(token) > 0:
+            self.auth_token = token
+            self.auth_headers["Authorization"] = "Bearer {}".format(token)
 
         self.logged_in = True
-
-    def get_address_with_basicauth_in_host(self, address, username, password):
-        '''
-        Inserts the username and password into the address hostname. For
-        HTTP basic authentication. And returns the result.
-        '''
-        up = urllib.parse.urlparse(address)
-        hostwithauth = "{}:{}@{}".format(
-            urllib.parse.quote(username, safe=''),
-            urllib.parse.quote(password, safe=''),
-            up.netloc,
-        )
-        up = up._replace(netloc=hostwithauth)
-        return up.geturl()
-
-    def get_basic_auth_header(self, username, password):
-        '''
-        Returns the HTTP Basic Authentication header for the given username
-        and password.
-        '''
-        return "Basic {}".format(
-            base64.b64encode(
-                "{}:{}".format(username, password).encode('utf-8'),
-            ).decode('ascii')
-        )
 
     def do_selected(self):
         '''
@@ -151,7 +117,7 @@ class HTTPMSSource(RB.BrowserSource):
             self.loader.cancel()
             self.loader = None
 
-    def search_tracks_api(self, data):
+    def search_tracks_api(self, http_code, data):
         '''
         This functions loads 'data' into the source's database. The data is
         assumed to be a JSON with a list of tracks. It must be a list of
@@ -329,7 +295,7 @@ class HTTPMSSource(RB.BrowserSource):
         source database, removes the stored credentials and shows the login
         page.
         '''
-        self.store_auth_data("", "", "")
+        self.store_auth_data("", "")
         self.logged_in = False
         self.login_entry_address.set_text("")
         self.builder.get_object("service_username").set_text("")
@@ -381,14 +347,18 @@ class HTTPMSSource(RB.BrowserSource):
         # Sometimes this can be different from track_url. For
         # example when the URL includes a token or basic auth.
         play_url = urllib.parse.urljoin(
-            self.address_with_auth,
+            self.address_base,
             '/file/{}'.format(item['id']),
         )
 
         album_url = urllib.parse.urljoin(
-            self.address_with_auth,
+            self.address_base,
             '/album/{}/artwork'.format(item['album_id']),
         )
+
+        if len(self.auth_token) > 0:
+            play_url = '{}?token={}'.format(play_url, self.auth_token)
+            album_url = '{}?token={}'.format(album_url, self.auth_token)
 
         entry = db.entry_lookup_by_location(track_url)
         if entry:
@@ -468,38 +438,86 @@ class HTTPMSSource(RB.BrowserSource):
         request is successful then it stores them into the plugin settings
         and shows the browser and entry list instead of the login form.
         '''
-        self.try_url = self.login_entry_address.get_text().strip()
-        self.try_username = self.login_entry_user.get_text().strip()
-        self.try_password = self.login_entry_pass.get_text()
+        remote_url = self.login_entry_address.get_text().strip()
 
-        if self.try_url == "":
+        if remote_url == "":
             print('Empty URL is not accepted')
             return
 
-        if not self.try_url.startswith("http://") or \
-                not self.try_url.startswith("https://"):
-            self.try_url = 'https://{}'.format(self.try_url)
+        if not remote_url.startswith("http://") and \
+                not remote_url.startswith("https://"):
+            remote_url = 'https://{}'.format(remote_url)
 
-        self.login_entry_address.set_sensitive(False)
-        self.login_entry_user.set_sensitive(False)
-        self.login_entry_pass.set_sensitive(False)
-        self.login_button.set_sensitive(False)
-        self.login_spinner.props.active = True
-        self.failed_indicator.hide()
+        self.show_login_loading()
 
-        try_url = urllib.parse.urljoin(self.try_url, '/search/')
-        try_url += '?=absolutelynotthereonehundredpercent'
+        username = self.login_entry_user.get_text().strip()
+        if len(username) > 0:
+            self.try_authenticated(remote_url)
+            return
+
+        browse_url = urllib.parse.urljoin(remote_url, '/browse/')
+
+        print('Trying HTTPMS server at {}'.format(browse_url))
+        loader = Loader()
+        loader.get_url(
+            browse_url,
+            self.try_unauthenticated_callback,
+            remote_url,
+        )
+
+    def try_unauthenticated_callback(self, http_code, data, remote_url):
+        '''
+        Checks if the response seems to be coming from an actual HTTPMS
+        server.
+
+        If the HTTP request failed assume it was because of lack of
+        credentials. If so try with authentication.
+        '''
+        if data is None:
+            print('Authentication without username/password failed. '
+                  'Trying with them.')
+            self.try_authenticated(remote_url)
+            return
+
+        self.hide_login_loading()
+
+        try:
+            json.loads(data)
+        except Exception as err:
+            print('The server at address {} does not seem to be an HTTPMS. '
+                  'Error decoding JSON: {}'.format(remote_url, err))
+            self.failed_indicator.show()
+            return
+
+        self.use_auth(remote_url, "")
+        self.store_auth_data(remote_url, "")
+
+        self.load_upstream_data()
+        self.grid.show()
+
+    def try_authenticated(self, remote_url):
+        '''
+        This method sends a request for token to the HTTPMS server by
+        using the username and password in the login screen.
+        '''
+        username = self.login_entry_user.get_text().strip()
+        password = self.login_entry_pass.get_text()
+
+        login_token_url = urllib.parse.urljoin(remote_url, '/login/token/')
 
         loader = Loader()
-        loader.set_headers({
-            "Authorization": self.get_basic_auth_header(
-                self.try_username,
-                self.try_password,
-            )
-        })
-        loader.get_url(try_url, self.try_auth_credentials_callback)
+        loader.post_url(
+            login_token_url,
+            self.try_auth_credentials_callback,
+            "application/json",
+            bytes(json.dumps({
+                'username': username,
+                'password': password,
+            }), 'utf-8'),
+            remote_url,
+        )
 
-    def try_auth_credentials_callback(self, data):
+    def try_auth_credentials_callback(self, http_code, data, remote_url):
         '''
         This callback is called from the request which tries the server
         address and auth credentials. If they are OK data will not be a
@@ -509,33 +527,82 @@ class HTTPMSSource(RB.BrowserSource):
         If the credentials are not OK then the login form is made active
         again so that the user can other address/credentials.
         '''
+
+        if data is None:
+            print("Authentication unsuccessful")
+            self.hide_login_loading()
+            self.failed_indicator.show()
+            return
+
+        try:
+            response = json.loads(data)
+        except Exception as err:
+            print("Wrong JSON in response for authentication: {}".format(err))
+            self.hide_login_loading()
+            self.failed_indicator.show()
+            return
+
+        if 'token' not in response:
+            print('No token in server response')
+            self.hide_login_loading()
+            self.failed_indicator.show()
+            return
+
+        token = response['token']
+        self.register_auth_token(token, remote_url)
+
+    def register_auth_token(self, token, remote_url):
+        '''
+        Sends a request to /register/token of the remote server in
+        order to activate the newly received token.
+        '''
+        register_token_url = urllib.parse.urljoin(
+            remote_url, '/register/token/')
+
+        register_token_url = '{}?token={}'.format(register_token_url, token)
+
+        loader = Loader()
+        loader.post_url(
+            register_token_url,
+            self.try_auth_token_callback,
+            "text/plain",
+            None,
+            remote_url,
+            token,
+        )
+
+    def try_auth_token_callback(self, http_code, data, remote_url, token):
+        self.hide_login_loading()
+
+        if http_code < 200 or http_code >= 300:
+            print(
+                'Registering token with the server failed. '
+                'HTTP status code: {}'.format(http_code))
+            return
+
+        self.use_auth(remote_url, token)
+        self.store_auth_data(
+            remote_url,
+            token,
+        )
+
+        self.load_upstream_data()
+        self.grid.show()
+
+    def show_login_loading(self):
+        self.login_entry_address.set_sensitive(False)
+        self.login_entry_user.set_sensitive(False)
+        self.login_entry_pass.set_sensitive(False)
+        self.login_button.set_sensitive(False)
+        self.login_spinner.props.active = True
+        self.failed_indicator.hide()
+
+    def hide_login_loading(self):
         self.login_entry_address.set_sensitive(True)
         self.login_entry_user.set_sensitive(True)
         self.login_entry_pass.set_sensitive(True)
         self.login_button.set_sensitive(True)
         self.login_spinner.props.active = False
-
-        if data is None:
-            print("Authentication unsuccessful")
-            self.failed_indicator.show()
-            del self.try_url
-            del self.try_username
-            del self.try_password
-            return
-
-        self.use_auth(self.try_url, self.try_username, self.try_password)
-        self.store_auth_data(
-            self.try_url,
-            self.try_username,
-            self.try_password,
-        )
-
-        del self.try_url
-        del self.try_username
-        del self.try_password
-
-        self.load_upstream_data()
-        self.grid.show()
 
     def user_logged_in(self):
         '''
@@ -567,14 +634,13 @@ class HTTPMSSource(RB.BrowserSource):
 
         try:
             address = kf.get_string("auth", "address")
-            username = kf.get_string("auth", "username")
-            password = kf.get_string("auth", "password")
+            token = kf.get_string("auth", "token")
             if len(address) > 0:
-                self.use_auth(address, username, password)
+                self.use_auth(address, token)
         except GLib.Error as err:
             print('Reading auth file error: {}'.format(err))
 
-    def store_auth_data(self, address, username, password):
+    def store_auth_data(self, address, token):
         '''
         Stores the provided server address and auth credentials in the
         plugin's data file.
@@ -586,8 +652,13 @@ class HTTPMSSource(RB.BrowserSource):
 
         kf = GLib.KeyFile.new()
         kf.set_string("auth", "address", address)
-        kf.set_string("auth", "username", username)
-        kf.set_string("auth", "password", password)
+        kf.set_string("auth", "token", token)
+
+        # The next two are left here in order to remove any left-overs
+        # from the time when the username and password were stored in
+        # the ini file.
+        kf.set_string("auth", "username", "")
+        kf.set_string("auth", "password", "")
 
         try:
             kf.save_to_file(file_name)
