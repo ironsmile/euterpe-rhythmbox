@@ -124,6 +124,11 @@ class HTTPMSSource(RB.BrowserSource):
         tracks like the one returned from searching into the HTTPMS via its
         REST API.
         '''
+        if http_code == 401:
+            print('Authentication with the remote server is out of date')
+            self.force_logout()
+            return
+
         if data is None:
             print("No data in search_tracks_api callback")
             return
@@ -298,8 +303,8 @@ class HTTPMSSource(RB.BrowserSource):
         self.store_auth_data("", "")
         self.logged_in = False
         self.login_entry_address.set_text("")
-        self.builder.get_object("service_username").set_text("")
-        self.builder.get_object("service_password").set_text("")
+        self.login_entry_user.set_text("")
+        self.login_entry_pass.set_text("")
 
         self.show_login_screen()
 
@@ -307,6 +312,11 @@ class HTTPMSSource(RB.BrowserSource):
         entry_type = self.props.entry_type
         db.entry_delete_by_type(entry_type)
         db.commit()
+
+    def force_logout(self):
+        server_address = self.address_base
+        self.logout_clicked_cb(None)
+        self.login_entry_address.set_text(server_address)
 
     def show_login_screen(self):
         '''

@@ -39,5 +39,5 @@ But really, almost nothing is documented. And where there are guides and documen
 * ~~Sort tracks after search~~ (sort of done)
 * ~~Preserve Browser size~~
 * ~~Logout Button~~
-* Automatic Logout on wrong credentials
+* ~~Automatic Logout on wrong credentials~~
 * ~~Authentication with query token when HTTPMS gets a support for it~~
