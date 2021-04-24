@@ -336,7 +336,7 @@ class HTTPMSSource(RB.BrowserSource):
         self.new_model()
 
         self.cancel_request()
-        search_url = urllib.parse.urljoin(self.address_base, '/search/')
+        search_url = urllib.parse.urljoin(self.address_base, '/v1/search/')
         print("Loading HTTPMS into the database")
         self.loader = Loader()
         self.loader.set_headers(self.auth_headers)
@@ -350,7 +350,7 @@ class HTTPMSSource(RB.BrowserSource):
         # track_url is the canonical unique URL for this track.
         track_url = urllib.parse.urljoin(
             self.address_base,
-            '/file/{}'.format(item['id']),
+            '/v1/file/{}'.format(item['id']),
         )
 
         # play_url is the URL at which this track can be loaded.
@@ -358,12 +358,12 @@ class HTTPMSSource(RB.BrowserSource):
         # example when the URL includes a token or basic auth.
         play_url = urllib.parse.urljoin(
             self.address_base,
-            '/file/{}'.format(item['id']),
+            '/v1/file/{}'.format(item['id']),
         )
 
         album_url = urllib.parse.urljoin(
             self.address_base,
-            '/album/{}/artwork'.format(item['album_id']),
+            '/v1/album/{}/artwork'.format(item['album_id']),
         )
 
         if len(self.auth_token) > 0:
@@ -513,7 +513,7 @@ class HTTPMSSource(RB.BrowserSource):
         username = self.login_entry_user.get_text().strip()
         password = self.login_entry_pass.get_text()
 
-        login_token_url = urllib.parse.urljoin(remote_url, '/login/token/')
+        login_token_url = urllib.parse.urljoin(remote_url, '/v1/login/token/')
 
         loader = Loader()
         loader.post_url(
@@ -567,7 +567,7 @@ class HTTPMSSource(RB.BrowserSource):
         order to activate the newly received token.
         '''
         register_token_url = urllib.parse.urljoin(
-            remote_url, '/register/token/')
+            remote_url, '/v1/register/token/')
 
         register_token_url = '{}?token={}'.format(register_token_url, token)
 
