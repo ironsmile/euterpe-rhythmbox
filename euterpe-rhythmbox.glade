@@ -61,7 +61,7 @@ Author: Doychin Atanasov
               <object class="GtkEntry" id="server_url">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">The URL address of your HTTPMS installation. Such as https://music.example.com. If the protocol is omitted then HTTPS is assumed.</property>
+                <property name="tooltip_text" translatable="yes">The URL address of your Euterpe installation. Such as https://music.example.com. If the protocol is omitted then HTTPS is assumed.</property>
                 <property name="width_chars">32</property>
                 <property name="primary_icon_stock">gtk-index</property>
                 <property name="placeholder_text" translatable="yes">https://music.example.com</property>
@@ -90,7 +90,7 @@ Author: Doychin Atanasov
               <object class="GtkEntry" id="service_username">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Your username for this HTTPMS installation. Such as "JohnDoe". If the server configuration does not require authentication this can be left blank field blank.</property>
+                <property name="tooltip_text" translatable="yes">Your username for this Euterpe installation. Such as "JohnDoe". If the server configuration does not require authentication this can be left blank field blank.</property>
                 <property name="primary_icon_stock">gtk-orientation-portrait</property>
               </object>
               <packing>
@@ -116,7 +116,7 @@ Author: Doychin Atanasov
               <object class="GtkEntry" id="service_password">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Your password for the username in this HTTPMS installation. If the server configuration does not require authentication this field can be left blank.</property>
+                <property name="tooltip_text" translatable="yes">Your password for the username in this Euterpe installation. If the server configuration does not require authentication this field can be left blank.</property>
                 <property name="visibility">False</property>
                 <property name="primary_icon_stock">gtk-dialog-authentication</property>
                 <property name="input_purpose">password</property>

@@ -5,30 +5,30 @@ import gettext
 import urllib.parse
 import os.path
 
-from httpmsloader import Loader
+from euterpeloader import Loader
 from gi.repository import GObject, RB, Peas, GLib, Gtk, GdkPixbuf
 
 gettext.install('rhythmbox', RB.locale_dir())
 
 
-class HTTPMSPlugin(GObject.Object, Peas.Activatable):
+class EuterpePlugin(GObject.Object, Peas.Activatable):
     object = GObject.property(type=GObject.Object)
 
     def __init__(self):
-        super(HTTPMSPlugin, self).__init__()
+        super(EuterpePlugin, self).__init__()
 
     def do_activate(self):
-        print("Activating HTTPMS plugin")
+        print("Activating Euterpe plugin")
 
         shell = self.object
         db = shell.props.db
-        entry_type = HTTPMSEntryType()
+        entry_type = EuterpeEntryType()
         db.register_entry_type(entry_type)
 
         model = RB.RhythmDBQueryModel.new_empty(db)
-        self.source = GObject.new(HTTPMSSource,
+        self.source = GObject.new(EuterpeSource,
                                   shell=shell,
-                                  name=("HTTPMS"),
+                                  name=("Euterpe"),
                                   plugin=self,
                                   query_model=model,
                                   entry_type=entry_type)
@@ -54,7 +54,7 @@ class HTTPMSPlugin(GObject.Object, Peas.Activatable):
         shell.register_entry_type_for_source(self.source, entry_type)
 
     def do_deactivate(self):
-        print("Deactivating HTTPMS plugin")
+        print("Deactivating Euterpe plugin")
 
         self.source.delete_thyself()
         del self.source
@@ -62,9 +62,9 @@ class HTTPMSPlugin(GObject.Object, Peas.Activatable):
         del self.icon
 
 
-class HTTPMSEntryType(RB.RhythmDBEntryType):
+class EuterpeEntryType(RB.RhythmDBEntryType):
     def __init__(self):
-        RB.RhythmDBEntryType.__init__(self, name='httpms-entry')
+        RB.RhythmDBEntryType.__init__(self, name='euterpe-entry')
 
     def do_can_sync_metadata(self, entry):
         return False
@@ -73,7 +73,7 @@ class HTTPMSEntryType(RB.RhythmDBEntryType):
         return entry.get_string(RB.RhythmDBPropType.MOUNTPOINT)
 
 
-class HTTPMSSource(RB.BrowserSource):
+class EuterpeSource(RB.BrowserSource):
     def __init__(self, **kwargs):
         RB.BrowserSource.__init__(self, **kwargs)
         self.loader = None
@@ -176,7 +176,7 @@ class HTTPMSSource(RB.BrowserSource):
 
         ui_file = os.path.join(
             Peas.PluginInfo.get_module_dir(self.props.plugin.plugin_info),
-            "httpms-rhythmbox.glade",
+            "euterpe-rhythmbox.glade",
         )
 
         self.builder.add_from_file(ui_file)
@@ -685,7 +685,7 @@ class HTTPMSSource(RB.BrowserSource):
         if data_dir is None:
             return None
 
-        return os.path.join(data_dir, "httpms.auth")
+        return os.path.join(data_dir, "euterpe.auth")
 
 
-GObject.type_register(HTTPMSSource)
+GObject.type_register(EuterpeSource)

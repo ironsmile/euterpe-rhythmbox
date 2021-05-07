@@ -1,9 +1,9 @@
 [Plugin]
 Loader=python3
-Module=httpms
+Module=euterpe
 IAge=2
-Name=HTTP Media Server client for Rhythmbox
-Description=Lets you play music from your HTTPMS
+Name=Euterpe client for Rhythmbox
+Description=Lets you play music from your Euterpe instance
 Authors=Doychin Atanasov <ironsmile@gmail.com>
-Copyright=Copyright © 2015 Doychin Atanasov
-Website=https://github.com/ironsmile/httpms-rhythmbox
+Copyright=Copyright © 2015-2021 Doychin Atanasov
+Website=https://listen-to-euterpe.eu/

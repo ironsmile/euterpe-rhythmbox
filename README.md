@@ -1,6 +1,6 @@
-# HTTPMS Plugin for Rhythmbox
+# Euterpe Plugin for Rhythmbox
 
-Using this plugin you can listen to your music served from a [HTTPMS server](https://github.com/ironsmile/httpms) directly in Rhythmbox.
+Using this plugin you can listen to your music served from a [Euterpe server](https://github.com/ironsmile/httpms) directly in Rhythmbox.
 
 ## Installation
 
@@ -11,11 +11,11 @@ Create a directory and place the contents of this repository under one of the fo
 
 ## Configuration
 
-There is no need for any configuration. It is all done via the plugin's UI on first activation. One will have to enter their HTTPMS address and optionally authentication if the server is protected. That's it!
+There is no need for any configuration. It is all done via the plugin's UI on first activation. One will have to enter their Euterpe address and optionally authentication if the server is protected. That's it!
 
 ## Usage
 
-After activating the plugin you will see a "HTTPMS" tab in the "Shared" group. In it you can use the "Search" menu to find your music.
+After activating the plugin you will see a "Euterpe" tab in the "Shared" group. In it you can use the "Search" menu to find your music.
 
 [![Plugin Screenshot](images/screenshot.png)](images/screenshot.png)
 
