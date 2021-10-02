@@ -31,6 +31,12 @@ As to help with development resources, I am at a loss. Plug-in development and d
 
 But really, almost nothing is documented. And where there are guides and documentation they are almost 100% out of date. Good luck!
 
+While developing it is convenient to run Rhythmbox while filtering out all messages but the ones from this plug-in. For this make sure the Rhythmbox process is stopped and then run
+
+```sh
+rhythmbox -D euterpe
+```
+
 ## TODO
 
 * ~~Settings for setting the HTTPMS address and access tokens~~
