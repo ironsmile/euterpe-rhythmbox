@@ -336,7 +336,7 @@ class EuterpeSource(RB.BrowserSource):
         self.new_model()
 
         self.cancel_request()
-        search_url = self.build_API_URL(self.address_base, '/v1/search/')
+        search_url = self.build_API_URL(self.address_base, ENDPOINT_SEARCH)
         print("Loading HTTPMS into the database")
         self.loader = Loader()
         self.loader.set_headers(self.auth_headers)
@@ -350,7 +350,7 @@ class EuterpeSource(RB.BrowserSource):
         # track_url is the canonical unique URL for this track.
         track_url = self.build_API_URL(
             self.address_base,
-            '/v1/file/{}'.format(item['id']),
+            ENDPOINT_FILE.format(item['id']),
         )
 
         # play_url is the URL at which this track can be loaded.
@@ -358,12 +358,12 @@ class EuterpeSource(RB.BrowserSource):
         # example when the URL includes a token or basic auth.
         play_url = self.build_API_URL(
             self.address_base,
-            '/v1/file/{}'.format(item['id']),
+            ENDPOINT_FILE.format(item['id']),
         )
 
         album_url = self.build_API_URL(
             self.address_base,
-            '/v1/album/{}/artwork'.format(item['album_id']),
+            ENDPOINT_ALBUM_ART.format(item['album_id']),
         )
 
         if len(self.auth_token) > 0:
@@ -526,7 +526,7 @@ class EuterpeSource(RB.BrowserSource):
         username = self.login_entry_user.get_text().strip()
         password = self.login_entry_pass.get_text()
 
-        login_token_url = self.build_API_URL(remote_url, '/v1/login/token/')
+        login_token_url = self.build_API_URL(remote_url, ENDPOINT_LOGIN)
         print("making auth request to {}".format(login_token_url))
 
         loader = Loader()
@@ -581,7 +581,7 @@ class EuterpeSource(RB.BrowserSource):
         order to activate the newly received token.
         '''
         register_token_url = self.build_API_URL(
-            remote_url, '/v1/register/token/')
+            remote_url, ENDPOINT_REGISTER_TOKEN)
 
         register_token_url = '{}?token={}'.format(register_token_url, token)
 
@@ -700,6 +700,13 @@ class EuterpeSource(RB.BrowserSource):
             return None
 
         return os.path.join(data_dir, "euterpe.auth")
+
+
+ENDPOINT_LOGIN = '/v1/login/token/'
+ENDPOINT_REGISTER_TOKEN = '/v1/register/token/'
+ENDPOINT_SEARCH = '/v1/search/'
+ENDPOINT_FILE = '/v1/file/{}'
+ENDPOINT_ALBUM_ART = '/v1/album/{}/artwork'
 
 
 GObject.type_register(EuterpeSource)
