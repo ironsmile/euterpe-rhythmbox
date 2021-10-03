@@ -336,7 +336,7 @@ class EuterpeSource(RB.BrowserSource):
         self.new_model()
 
         self.cancel_request()
-        search_url = urllib.parse.urljoin(self.address_base, '/v1/search/')
+        search_url = self.build_API_URL(self.address_base, '/v1/search/')
         print("Loading HTTPMS into the database")
         self.loader = Loader()
         self.loader.set_headers(self.auth_headers)
@@ -348,7 +348,7 @@ class EuterpeSource(RB.BrowserSource):
         '''
 
         # track_url is the canonical unique URL for this track.
-        track_url = urllib.parse.urljoin(
+        track_url = self.build_API_URL(
             self.address_base,
             '/v1/file/{}'.format(item['id']),
         )
@@ -356,12 +356,12 @@ class EuterpeSource(RB.BrowserSource):
         # play_url is the URL at which this track can be loaded.
         # Sometimes this can be different from track_url. For
         # example when the URL includes a token or basic auth.
-        play_url = urllib.parse.urljoin(
+        play_url = self.build_API_URL(
             self.address_base,
             '/v1/file/{}'.format(item['id']),
         )
 
-        album_url = urllib.parse.urljoin(
+        album_url = self.build_API_URL(
             self.address_base,
             '/v1/album/{}/artwork'.format(item['album_id']),
         )
@@ -421,6 +421,19 @@ class EuterpeSource(RB.BrowserSource):
         db.do_full_query_async_parsed(model, q)
         self.props.query_model = model
 
+    def build_API_URL(self, remote_url, endpoint):
+        parsed = urllib.parse.urlparse(remote_url)
+
+        # If the remote URL is an domain or a sub-domain without a path
+        # component such as https://music.example.com
+        if parsed.path == "":
+            return urllib.parse.urljoin(remote_url, endpoint)
+
+        if not remote_url.endswith("/"):
+            remote_url = remote_url + "/"
+
+        return urllib.parse.urljoin(remote_url, endpoint.lstrip("/"))
+
     def playing_entry_changed_cb(self, player, entry):
         '''
         playing_entry_changed_cb changes the album artwork on every
@@ -465,7 +478,7 @@ class EuterpeSource(RB.BrowserSource):
             self.try_authenticated(remote_url)
             return
 
-        browse_url = urllib.parse.urljoin(remote_url, '/browse/')
+        browse_url = self.build_API_URL(remote_url, '/browse/')
 
         print('Trying HTTPMS server at {}'.format(browse_url))
         loader = Loader()
@@ -513,7 +526,8 @@ class EuterpeSource(RB.BrowserSource):
         username = self.login_entry_user.get_text().strip()
         password = self.login_entry_pass.get_text()
 
-        login_token_url = urllib.parse.urljoin(remote_url, '/v1/login/token/')
+        login_token_url = self.build_API_URL(remote_url, '/v1/login/token/')
+        print("making auth request to {}".format(login_token_url))
 
         loader = Loader()
         loader.post_url(
@@ -566,7 +580,7 @@ class EuterpeSource(RB.BrowserSource):
         Sends a request to /register/token of the remote server in
         order to activate the newly received token.
         '''
-        register_token_url = urllib.parse.urljoin(
+        register_token_url = self.build_API_URL(
             remote_url, '/v1/register/token/')
 
         register_token_url = '{}?token={}'.format(register_token_url, token)
