@@ -5,7 +5,7 @@ import sys
 from gi.repository import GObject, GLib, Gio, Soup
 from httpmsconfig import plugin_version
 
-USER_AGENT = "HTTPS-Rhythmbox-Plugin/{}".format(plugin_version)
+USER_AGENT = "Euterpe-Rhythmbox-Plugin/{}".format(plugin_version)
 
 
 def call_callback(callback, status, data, args):
