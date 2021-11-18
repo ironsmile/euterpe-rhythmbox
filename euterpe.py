@@ -478,7 +478,7 @@ class EuterpeSource(RB.BrowserSource):
             self.try_authenticated(remote_url)
             return
 
-        browse_url = self.build_API_URL(remote_url, '/browse/')
+        browse_url = self.build_API_URL(remote_url, ENDPOINT_BROWSE)
 
         print('Trying HTTPMS server at {}'.format(browse_url))
         loader = Loader()
@@ -707,6 +707,7 @@ ENDPOINT_REGISTER_TOKEN = '/v1/register/token/'
 ENDPOINT_SEARCH = '/v1/search/'
 ENDPOINT_FILE = '/v1/file/{}'
 ENDPOINT_ALBUM_ART = '/v1/album/{}/artwork'
+ENDPOINT_BROWSE = "/v1/browse/"
 
 
 GObject.type_register(EuterpeSource)
