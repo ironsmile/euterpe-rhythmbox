@@ -1,5 +1,5 @@
 import gi
-gi.require_version('Soup', '2.4')
+gi.require_version('Soup', '3.0')
 import sys
 
 from gi.repository import GObject, GLib, Gio, Soup
@@ -28,17 +28,18 @@ class Loader(object):
             loader_session.props.user_agent = USER_AGENT
         self._cancel = Gio.Cancellable()
 
-    def _message_cb(self, session, message, data):
-        status = message.props.status_code
+    def _message_cb(self, source, result, data):
+        message = source.get_async_result_message(result)
+        status = message.get_status()
         if status >= 200 and status <= 299:
             call_callback(
                 self.callback,
                 status,
-                message.props.response_body_data.get_data(),
-                self.args,
+                source.send_and_read_finish(result).get_data(),
+                data,
             )
         else:
-            call_callback(self.callback, status, None, self.args)
+            call_callback(self.callback, status, None, data)
 
     def set_headers(self, headers):
         self.headers = headers
@@ -46,13 +47,18 @@ class Loader(object):
     def get_url(self, url, callback, *args):
         self.url = url
         self.callback = callback
-        self.args = args
         try:
             global loader_session
             req = Soup.Message.new("GET", url)
             for k, v in self.headers.items():
                 req.props.request_headers.append(k, v)
-            loader_session.queue_message(req, self._message_cb, None)
+            loader_session.send_and_read_async(
+                req,
+                Soup.MessagePriority.NORMAL,
+                self._cancel,
+                self._message_cb,
+                args,
+            )
         except Exception:
             sys.excepthook(*sys.exc_info())
             callback(None, *args)
@@ -60,17 +66,22 @@ class Loader(object):
     def post_url(self, url, callback, content_type, body, *args):
         self.url = url
         self.callback = callback
-        self.args = args
         try:
             global loader_session
             req = Soup.Message.new("POST", url)
             for k, v in self.headers.items():
                 req.props.request_headers.append(k, v)
-            req.set_request(content_type, Soup.MemoryUse.STATIC, body)
-            loader_session.queue_message(req, self._message_cb, None)
+            req.set_request_body_from_bytes(content_type, GLib.Bytes.new(body))
+            loader_session.send_and_read_async(
+                req,
+                Soup.MessagePriority.NORMAL,
+                self._cancel,
+                self._message_cb,
+                args,
+            )
         except Exception:
             sys.excepthook(*sys.exc_info())
-            callback(None, *args)
+            callback(None, None, *args)
 
     def cancel(self):
         self._cancel.cancel()
