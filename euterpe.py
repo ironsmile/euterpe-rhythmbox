@@ -49,7 +49,7 @@ class EuterpePlugin(GObject.Object, Peas.Activatable):
             self.source.set_property("icon", icon)
             self.icon = icon
 
-        group = RB.DisplayPageGroup.get_by_id("shared")
+        group = RB.DisplayPageGroup.get_by_id("library")
         shell.append_display_page(self.source, group)
         shell.register_entry_type_for_source(self.source, entry_type)
 
